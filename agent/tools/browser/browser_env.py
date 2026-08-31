@@ -53,6 +53,9 @@ def browsers_download_dir() -> str:
     the frozen desktop build self-contained and makes the download survive app
     updates. Set as PLAYWRIGHT_BROWSERS_PATH for both install and runtime.
     """
+    explicit = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if explicit:
+        return os.path.expanduser(explicit)
     return os.path.join(get_data_root(), "ms-playwright")
 
 

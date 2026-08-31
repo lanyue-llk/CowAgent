@@ -14,6 +14,7 @@ from agent.tools.browser.browser_provider import (
     LocalMoliProvider,
     find_moli_binary,
 )
+from agent.tools.browser.browser_env import browsers_download_dir
 from agent.tools.browser.browser_service import BrowserService
 
 
@@ -73,6 +74,17 @@ class TestLocalMoliProvider(unittest.TestCase):
         provider = LocalMoliProvider({"moli_args": ["--host=0.0.0.0"]})
         with self.assertRaisesRegex(ValueError, "cannot override"):
             provider.start()
+
+
+class TestBrowserDownloadPath(unittest.TestCase):
+    def test_explicit_playwright_path_is_used_for_probe_and_runtime(self):
+        with patch.dict(
+            os.environ,
+            {"PLAYWRIGHT_BROWSERS_PATH": "/opt/cow/ms-playwright"},
+        ):
+            self.assertEqual(
+                browsers_download_dir(), "/opt/cow/ms-playwright"
+            )
 
 
 class _FakeSession:

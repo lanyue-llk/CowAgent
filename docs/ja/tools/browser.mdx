@@ -185,3 +185,51 @@ Chromeをデバッグポートと専用のユーザーデータディレクト�
 <Note>
   Chrome 137以降では `--remote-debugging-port` を専用の `--user-data-dir` と組み合わせる必要があるため、CDPで起動するChromeは**普段使いのChromeのログイン状態をそのまま流用できません**。専用プロファイル内で一度ログインし直す必要があります。
 </Note>
+
+### 方法3: ローカル Moli Provider
+
+[Moli](https://github.com/lexmount/moli) は Agent 向けの独立したオープン
+ソース Browser Provider です。Chromium の代替ではありません。速度と
+リソースコストを優先する場合は Moli、最大限のサイト・視覚互換性を優先
+する場合は Chrome/Chromium を推奨します。
+
+```json
+{
+  "tools": {
+    "browser": {
+      "engine": "moli",
+      "moli_layout": true,
+      "moli_resource": false
+    }
+  }
+}
+```
+
+`moli` を `PATH` に配置すると、CowAgent がプロセスを自動的に
+起動・終了します。
+
+### 方法4: Lexmount Cloud Browser Provider
+
+```bash
+export LEXMOUNT_API_KEY="sk_..."
+export LEXMOUNT_PROJECT_ID="project_..."
+```
+
+```json
+{
+  "tools": {
+    "browser": {
+      "engine": "lexmount",
+      "lexmount": {
+        "browser": "moli",
+        "layout": true,
+        "resource": false
+      }
+    }
+  }
+}
+```
+
+`browser` を `chromium` にするとクラウド Chromium を使用します。
+Moli は SDK/API の `light`、Chromium は `normal` に対応します。
+CowAgent は Session の作成、CDP 接続、終了時の回収を管理します。

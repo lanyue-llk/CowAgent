@@ -20,6 +20,7 @@ Resolution priority (see resolve_engine):
 import os
 import sys
 import shutil
+import importlib.util
 from typing import Optional, Dict, Any
 
 from common.log import logger
@@ -171,7 +172,8 @@ def resolve_engine(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
 
     Returns a dict describing the launch strategy:
         {
-            "mode": "system-chrome" | "playwright-chromium" | "none",
+            "mode": "system-chrome" | "playwright-chromium" | "moli" |
+                    "lexmount" | "none",
             "channel": Optional[str],   # for system-chrome
             "path": Optional[str],      # for system-chrome (informational)
             "has_playwright": bool,
@@ -179,7 +181,8 @@ def resolve_engine(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         }
 
     Config keys under tools.browser that influence this:
-      - engine: "auto" (default) | "system-chrome" | "chromium"
+      - engine: "auto" (default) | "system-chrome" | "chromium" |
+                "moli" | "lexmount"
           Force a specific engine. "auto" prefers system Chrome, then falls
           back to a downloaded Chromium.
       - prefer_system_browser: bool (default True). When False under "auto",
@@ -199,6 +202,56 @@ def resolve_engine(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
             "path": None,
             "has_playwright": False,
             "reason": "playwright package not available",
+        }
+
+    if engine_pref == "moli":
+        from agent.tools.browser.browser_provider import find_moli_binary
+
+        path = find_moli_binary(config)
+        return {
+            "mode": "moli" if path else "none",
+            "channel": None,
+            "path": path,
+            "has_playwright": True,
+            "reason": (
+                "using local Moli provider"
+                if path
+                else "engine=moli but no Moli executable was found"
+            ),
+        }
+
+    if engine_pref == "lexmount":
+        nested = config.get("lexmount") or {}
+        nested = nested if isinstance(nested, dict) else {}
+        has_sdk = importlib.util.find_spec("lexmount") is not None
+        has_key = bool(
+            config.get("lexmount_api_key")
+            or nested.get("api_key")
+            or os.environ.get("LEXMOUNT_API_KEY")
+        )
+        has_project = bool(
+            config.get("lexmount_project_id")
+            or nested.get("project_id")
+            or os.environ.get("LEXMOUNT_PROJECT_ID")
+        )
+        ready = has_sdk and has_key and has_project
+        missing = []
+        if not has_sdk:
+            missing.append("lexmount>=0.5.18 package")
+        if not has_key:
+            missing.append("API key")
+        if not has_project:
+            missing.append("project ID")
+        return {
+            "mode": "lexmount" if ready else "none",
+            "channel": None,
+            "path": None,
+            "has_playwright": True,
+            "reason": (
+                "using Lexmount Cloud Browser provider"
+                if ready
+                else "engine=lexmount missing " + ", ".join(missing)
+            ),
         }
 
     system = None

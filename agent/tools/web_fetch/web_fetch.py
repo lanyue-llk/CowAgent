@@ -9,6 +9,7 @@ Supports:
 import os
 import re
 import uuid
+import json
 from typing import Dict, Any, Optional, Set
 from urllib.parse import urlparse, unquote
 
@@ -22,6 +23,7 @@ from common.log import logger
 
 DEFAULT_TIMEOUT = 30
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+MAX_LEXMOUNT_RESPONSE_SIZE = 10 * 1024 * 1024  # 10MB
 # Cap on how many redirects we follow; each hop's target is re-validated
 # against the SSRF guard so a public URL cannot bounce us into an internal one.
 MAX_REDIRECTS = 10
@@ -83,6 +85,7 @@ class WebFetch(BaseTool):
     name: str = "web_fetch"
     description: str = (
         "Fetch content from a http/https URL. For web pages, extracts readable text. "
+        "Can use the local HTTP extractor or Lexmount WebFetch for rendered pages. "
         "For document files (PDF, Word, TXT, Markdown, Excel, PPT), downloads and parses the file content. "
         "Supported file types: .pdf, .docx, .txt, .md, .csv, .xls, .xlsx, .ppt, .pptx"
     )
@@ -101,6 +104,38 @@ class WebFetch(BaseTool):
     def __init__(self, config: dict = None):
         self.config = config or {}
         self.cwd = self.config.get("cwd", os.getcwd())
+
+    def get_json_schema(self) -> dict:
+        """Expose provider choice only when Lexmount credentials are configured."""
+        schema = {
+            "name": self.name,
+            "description": self.description,
+            "parameters": json.loads(json.dumps(self.params)),
+        }
+        nested = self.config.get("lexmount") or {}
+        nested = nested if isinstance(nested, dict) else {}
+        has_lexmount = bool(
+            (
+                self.config.get("lexmount_api_key")
+                or nested.get("api_key")
+                or os.environ.get("LEXMOUNT_API_KEY")
+            )
+            and (
+                self.config.get("lexmount_project_id")
+                or nested.get("project_id")
+                or os.environ.get("LEXMOUNT_PROJECT_ID")
+            )
+        )
+        if has_lexmount and self.config.get("allow_provider_override", True):
+            schema["parameters"]["properties"]["provider"] = {
+                "type": "string",
+                "enum": ["local", "lexmount"],
+                "description": (
+                    "Web page fetch provider. Documents always use CowAgent's "
+                    "local parser."
+                ),
+            }
+        return schema
 
     def execute(self, args: Dict[str, Any]) -> ToolResult:
         url = args.get("url", "").strip()
@@ -121,6 +156,15 @@ class WebFetch(BaseTool):
         if _is_document_url(url):
             return self._fetch_document(url)
 
+        provider = str(
+            args.get("provider") or self.config.get("provider") or "local"
+        ).strip().lower()
+        if provider == "lexmount":
+            return self._fetch_webpage_lexmount(url)
+        if provider != "local":
+            return ToolResult.fail(
+                "Error: web_fetch provider must be 'local' or 'lexmount'"
+            )
         return self._fetch_webpage(url)
 
     # ---- Safe request helper ----
@@ -192,6 +236,137 @@ class WebFetch(BaseTool):
         text = self._extract_text(html)
 
         return ToolResult.success(f"Title: {title}\n\nContent:\n{text}")
+
+    def _lexmount_option(self, name: str, default=None):
+        nested = self.config.get("lexmount") or {}
+        nested = nested if isinstance(nested, dict) else {}
+        top_level = self.config.get(f"lexmount_{name}")
+        if top_level is not None:
+            return top_level
+        return nested.get(name, default)
+
+    def _fetch_webpage_lexmount(self, url: str) -> ToolResult:
+        """Fetch one public webpage through Lexmount WebFetch /v1/extract."""
+        api_key = self._lexmount_option("api_key") or os.environ.get(
+            "LEXMOUNT_API_KEY"
+        )
+        project_id = self._lexmount_option("project_id") or os.environ.get(
+            "LEXMOUNT_PROJECT_ID"
+        )
+        if not api_key or not project_id:
+            return ToolResult.fail(
+                "Error: Lexmount WebFetch requires LEXMOUNT_API_KEY and "
+                "LEXMOUNT_PROJECT_ID (or tools.web_fetch.lexmount credentials)"
+            )
+
+        base_url = str(
+            self._lexmount_option("base_url")
+            or os.environ.get("LEXMOUNT_WEBFETCH_BASE_URL")
+            or os.environ.get("LEXMOUNT_BASE_URL")
+            or "https://api.lexmount.cn"
+        ).rstrip("/")
+        parsed_base = urlparse(base_url)
+        if parsed_base.scheme != "https" and parsed_base.hostname not in (
+            "127.0.0.1",
+            "localhost",
+            "::1",
+        ):
+            return ToolResult.fail(
+                "Error: Lexmount WebFetch base_url must use HTTPS "
+                "(HTTP is allowed only for loopback testing)"
+            )
+
+        timeout = float(self._lexmount_option("timeout", DEFAULT_TIMEOUT))
+        endpoint = base_url + "/v1/extract"
+        headers = {
+            "Content-Type": "application/json",
+            "X-API-Key": str(api_key),
+            "X-Project-Id": str(project_id),
+        }
+        try:
+            response = requests.post(
+                endpoint,
+                headers=headers,
+                json={"extract": {"url": url}},
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            raw = response.content
+            if len(raw) > MAX_LEXMOUNT_RESPONSE_SIZE:
+                return ToolResult.fail(
+                    "Error: Lexmount WebFetch response exceeded 10MB"
+                )
+            payload = json.loads(raw.decode(response.encoding or "utf-8"))
+        except requests.Timeout:
+            return ToolResult.fail(
+                f"Error: Lexmount WebFetch timed out after {timeout:.0f}s"
+            )
+        except requests.ConnectionError:
+            return ToolResult.fail("Error: Failed to connect to Lexmount WebFetch")
+        except requests.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else "unknown"
+            return ToolResult.fail(f"Error: Lexmount WebFetch HTTP {status}")
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return ToolResult.fail("Error: Lexmount WebFetch returned invalid JSON")
+        except Exception as exc:
+            return ToolResult.fail(f"Error: Lexmount WebFetch failed: {exc}")
+
+        if payload.get("error"):
+            error = payload["error"]
+            if isinstance(error, dict):
+                code = error.get("code") or "provider_error"
+                message = error.get("message") or "request failed"
+                return ToolResult.fail(
+                    f"Error: Lexmount WebFetch {code}: {message}"
+                )
+            return ToolResult.fail("Error: Lexmount WebFetch request failed")
+
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            return ToolResult.fail(
+                "Error: Lexmount WebFetch response has no result object"
+            )
+        final_url = result.get("final_url") or result.get("url") or url
+        try:
+            validate_url_safe(final_url)
+        except ValueError as exc:
+            return ToolResult.fail(
+                f"Error: Lexmount WebFetch returned an unsafe final URL: {exc}"
+            )
+
+        title = result.get("title") or "Untitled"
+        main_text = result.get("main_text") or result.get("description") or ""
+        if not isinstance(main_text, str) or not main_text.strip():
+            return ToolResult.fail(
+                "Error: Lexmount WebFetch returned no readable content"
+            )
+        truncation = truncate_head(main_text)
+        metadata = (
+            f"Title: {title}\n"
+            f"URL: {final_url}\n"
+            f"Provider: lexmount\n"
+            f"Engine: {result.get('engine') or 'unknown'}\n"
+            f"Request ID: {payload.get('request_id') or 'unknown'}\n"
+        )
+        if truncation.truncated:
+            metadata += (
+                f"Content truncated: showing {truncation.output_lines} of "
+                f"{truncation.total_lines} lines\n"
+            )
+        response_metadata = payload.get("metadata")
+        if not isinstance(response_metadata, dict):
+            response_metadata = {}
+        return ToolResult.success(
+            metadata + "\nContent:\n" + truncation.content,
+            ext_data={
+                "provider": "lexmount",
+                "request_id": payload.get("request_id"),
+                "final_url": final_url,
+                "engine": result.get("engine"),
+                "dom_id": result.get("dom_id")
+                or response_metadata.get("dom_id"),
+            },
+        )
 
     # ---- Document fetching ----
 

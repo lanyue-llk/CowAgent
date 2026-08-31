@@ -185,3 +185,55 @@ Agent 使用浏览器的典型流程：
 <Note>
   Chrome 137+ 限制 `--remote-debugging-port` 必须搭配独立 `--user-data-dir`，因此 CDP 启动的 Chrome **无法直接复用你日常 Chrome 的登录态**，需要在独立目录中重新登录一次。
 </Note>
+
+### 方式三：本地 Moli Provider
+
+[Moli](https://github.com/lexmount/moli) 是面向 Agent 工作负载的独立开源
+Browser Provider，不作为 Chromium 的替代品：速度和资源成本优先时推荐
+Moli；网站与视觉兼容性优先时推荐 Chrome/Chromium。
+
+```json
+{
+  "tools": {
+    "browser": {
+      "engine": "moli",
+      "moli_layout": true,
+      "moli_resource": false
+    }
+  }
+}
+```
+
+安装 Moli 并确保 `moli` 位于 `PATH` 后，CowAgent 会自动启动和回收它。
+可选项包括 `moli_path`、`moli_profile_dir`、`moli_layout`、
+`moli_resource` 和 `moli_args`。
+
+### 方式四：Lexmount Cloud Browser Provider
+
+Lexmount Cloud Browser 提供托管的 Chromium 和 Moli：
+
+```bash
+export LEXMOUNT_API_KEY="sk_..."
+export LEXMOUNT_PROJECT_ID="project_..."
+```
+
+```json
+{
+  "tools": {
+    "browser": {
+      "engine": "lexmount",
+      "lexmount": {
+        "browser": "moli",
+        "layout": true,
+        "resource": false,
+        "downloads": false,
+        "recording": false
+      }
+    }
+  }
+}
+```
+
+将 `browser` 改为 `chromium` 可使用云端 Chromium。Moli 对应 SDK/API
+值 `light`，Chromium 对应 `normal`。CowAgent 按需创建 Session，通过
+CDP 连接，并在工具关闭或空闲超时后回收；完整连接地址不会写入日志。

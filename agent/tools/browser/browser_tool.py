@@ -16,6 +16,7 @@ Launch modes (configured under `tools.browser` in config.json):
 """
 
 import ipaddress
+import hashlib
 import json
 import os
 import socket
@@ -117,6 +118,7 @@ class BrowserTool(BaseTool):
     }
 
     _shared_service: Optional[BrowserService] = None
+    _shared_service_key: Optional[str] = None
 
     def __init__(self, config: dict = None):
         self.config = config or {}
@@ -128,13 +130,30 @@ class BrowserTool(BaseTool):
         if self._service is not None:
             return self._service
 
+        # Do not accidentally reuse a cloud session or local provider after the
+        # browser configuration changes. Hashing avoids retaining credentials in
+        # a process-global class attribute.
+        config_key = hashlib.sha256(
+            json.dumps(
+                {"config": self.config, "cwd": self.cwd},
+                sort_keys=True,
+                default=str,
+            ).encode("utf-8")
+        ).hexdigest()
+
         # Reuse shared service across tool copies within the same session
-        if BrowserTool._shared_service is not None:
+        if (
+            BrowserTool._shared_service is not None
+            and BrowserTool._shared_service_key == config_key
+        ):
             self._service = BrowserTool._shared_service
             return self._service
+        if BrowserTool._shared_service is not None:
+            BrowserTool._shared_service.close()
 
         self._service = BrowserService(self.config)
         BrowserTool._shared_service = self._service
+        BrowserTool._shared_service_key = config_key
         return self._service
 
     def _allow_private_targets(self) -> bool:
@@ -206,13 +225,15 @@ class BrowserTool(BaseTool):
         """
         if not is_cloud_deployment():
             return None
-        if self.config.get("cdp_endpoint"):
+        engine = str(self.config.get("engine", "")).strip().lower()
+        if self.config.get("cdp_endpoint") or engine == "lexmount":
             return None
         running = BrowserTool._shared_service
         if running is not None and running.is_running():
             return None
 
-        threshold = self.config.get("min_memory_mb", _MIN_LAUNCH_HEADROOM_MB)
+        default_threshold = 100 if engine == "moli" else _MIN_LAUNCH_HEADROOM_MB
+        threshold = self.config.get("min_memory_mb", default_threshold)
         try:
             threshold = float(threshold)
         except (TypeError, ValueError):
@@ -244,6 +265,10 @@ class BrowserTool(BaseTool):
         of surfacing a raw Playwright launch error. CDP mode is exempt (the
         endpoint is external and validated at connect time).
         """
+        # A service injected by an embedding or test is already the selected
+        # runtime; probing local installation state would incorrectly block it.
+        if self._service is not None:
+            return None
         if self.config.get("cdp_endpoint"):
             return None
         try:
@@ -255,6 +280,20 @@ class BrowserTool(BaseTool):
 
         if summary.get("ready"):
             return None
+
+        engine = str(self.config.get("engine", "")).strip().lower()
+        if engine == "moli":
+            return ToolResult.fail(
+                "Moli browser provider is not ready. Install Moli from "
+                "https://github.com/lexmount/moli, add it to PATH, or configure "
+                "tools.browser.moli_path. Do not retry until it is installed."
+            )
+        if engine == "lexmount":
+            return ToolResult.fail(
+                "Lexmount Cloud Browser is not ready: "
+                f"{summary.get('engine', {}).get('reason', 'check provider configuration')}. "
+                "Configure LEXMOUNT_API_KEY and LEXMOUNT_PROJECT_ID, then retry."
+            )
 
         # Desktop clients (dev or packaged) have no `cow` CLI — onboard via the
         # in-chat `/install-browser` command. Source / web / server installs use
@@ -471,4 +510,5 @@ class BrowserTool(BaseTool):
             self._service.close()
             self._service = None
         BrowserTool._shared_service = None
+        BrowserTool._shared_service_key = None
         logger.info("[Browser] BrowserTool closed")

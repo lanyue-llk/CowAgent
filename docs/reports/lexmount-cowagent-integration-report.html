@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lexmount 与 CowAgent 浏览器能力集成评估</title>
+  <style>
+    :root{--ink:#172033;--muted:#637087;--paper:#f3f2ed;--panel:#fffefa;--line:#d8d8d1;--blue:#2156d9;--blue2:#e9efff;--green:#08745d;--green2:#e5f5ef;--amber:#9a5900;--amber2:#fff1d9;--red:#a63c45;--red2:#fdebee;--shadow:0 18px 48px rgba(23,32,51,.08)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;overflow-x:hidden}body{margin:0;overflow-x:hidden;color:var(--ink);background:radial-gradient(circle at 8% 0,rgba(33,86,217,.11),transparent 30rem),radial-gradient(circle at 95% 8%,rgba(8,116,93,.08),transparent 28rem),var(--paper);font:15px/1.72 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}a{color:var(--blue);text-underline-offset:3px}.shell{width:min(1160px,calc(100% - 32px));margin:auto}header{padding:68px 0 42px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}h1{max-width:960px;margin:10px 0 16px;font-size:clamp(35px,6vw,68px);line-height:1.04;letter-spacing:-.045em}.lead{max-width:850px;margin:0;color:#48566e;font-size:18px}.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}.pill{padding:6px 11px;border:1px solid #cbd3e5;border-radius:99px;background:rgba(255,255,255,.72);font-size:12px;font-weight:700}.summary{display:grid;grid-template-columns:1.35fr .65fr;gap:18px;margin-bottom:30px}.card,.section{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.card{padding:24px}.verdict{border-top:5px solid var(--blue)}.verdict h2{font-size:25px}.score{display:grid;gap:12px}.score div{padding:15px 17px;border-radius:13px;background:#f7f8fb}.score strong{display:block;font-size:25px;line-height:1.2}.score span{color:var(--muted);font-size:12px}.section{padding:clamp(22px,4vw,42px);margin:0 0 20px}h2{margin:0 0 14px;font-size:clamp(24px,3vw,36px);line-height:1.18;letter-spacing:-.025em}h3{margin:24px 0 8px;font-size:20px}p{margin:8px 0 14px}.muted,.note{color:var(--muted)}.kicker{display:inline-block;margin-bottom:8px;color:var(--blue);font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.grid2,.grid3{display:grid;gap:14px}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.mini{padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff}.mini h3{margin:0 0 8px}.good{background:var(--green2);border-color:#b9dfd2}.warn{background:var(--amber2);border-color:#ead09e}.risk{background:var(--red2);border-color:#efc1c7}.blue{background:var(--blue2);border-color:#c6d4fc}.callout{margin:18px 0;padding:17px 19px;border-left:4px solid var(--blue);border-radius:5px 13px 13px 5px;background:var(--blue2)}.callout.good{border-left-color:var(--green)}.callout.warn{border-left-color:var(--amber)}table{width:100%;border-collapse:separate;border-spacing:0;margin:15px 0;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#fff}th,td{padding:12px 13px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f1f3f7;font-size:12px;letter-spacing:.03em}tr:last-child td{border-bottom:0}code{padding:.12em .38em;border-radius:5px;background:#edf0f5;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}pre{margin:13px 0;padding:17px;overflow:auto;border-radius:13px;color:#eef4ff;background:#172033;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}pre code{padding:0;background:none}.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch;gap:10px;margin:20px 0}.node{padding:18px;border:1px solid #cbd4e8;border-radius:14px;background:#fff}.arrow{display:grid;place-items:center;color:var(--blue);font-size:24px}.badge{display:inline-block;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:800;background:var(--blue2);color:var(--blue)}ul,ol{padding-left:21px}li{margin:6px 0}.timeline{display:grid;grid-template-columns:1fr 1fr;gap:14px}.week{padding:20px;border:1px solid var(--line);border-radius:14px;background:#fff}.week h3{margin-top:0}.day{display:grid;grid-template-columns:62px 1fr;gap:10px;padding:9px 0;border-bottom:1px dashed #d9dbe1}.day:last-child{border-bottom:0}.day b{color:var(--blue)}.sources{columns:2;column-gap:30px}.sources li{break-inside:avoid}footer{padding:20px 0 58px;color:var(--muted);font-size:12px}
+    @media(max-width:800px){.summary,.grid2,.grid3,.timeline{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}.sources{columns:1}table{display:block;overflow-x:auto}.section{border-radius:14px}header{padding-top:42px}}
+    @media print{body{background:#fff}.card,.section{box-shadow:none;break-inside:avoid}.shell{width:100%}a{color:inherit}}
+  </style>
+</head>
+<body>
+  <header class="shell">
+    <div class="eyebrow">Technical integration report · 2026-08-31</div>
+    <h1>Lexmount 与 CowAgent<br>浏览器能力集成评估</h1>
+    <p class="lead">基于 CowAgent 当前主干代码、在审 PR、Moli 1.0.6 实机兼容性测试与 Lexmount 公开产品能力，评估 Web Search、Web Fetch、Browser 三层的真实集成位置、用户价值、上游接受路径及两周可交付范围，并记录已完成的 fork 集成结果。</p>
+    <div class="meta"><span class="pill">CowAgent commit ed5bb34</span><span class="pill">实现 commit 98f7fbc4</span><span class="pill">Moli 1.0.6</span><span class="pill">Playwright 1.52.0</span><span class="pill">代码审阅 + 实测 + 公开资料</span></div>
+  </header>
+  <main class="shell">
+    <section class="summary">
+      <div class="card verdict">
+        <span class="kicker">Executive conclusion</span>
+        <h2>有明确机会，但不是再做一个 Web Search 供应商</h2>
+        <p><strong>CowAgent 已完整接入 Bocha、Qianfan、Zhipu、LinkAI 四家搜索后端。</strong>Lexmount 当前没有搜索 API，因此不应在 <code>web_search</code> 中伪装成第五家搜索服务。合适的产品位置是：以 Moli 提供本地低资源浏览器，以 Lexmount WebFetch 提供动态页面提取，以 Lexmount Cloud Browser 提供可托管的 Chromium / Moli 生产运行时。</p>
+        <p>最小可行策略是“<strong>本地免费入口 + 云端双内核生产升级</strong>”：DOM 驱动任务优先试用本地 Moli；兼容性敏感任务继续使用 Chromium；并发、代理、会话管理、可观测与人工接管需求升级到 Lexmount Cloud Browser。这个路径成立，但在缺少客户分布数据时，不应宣称 Moli 会成为“大部分客户”的默认选择。</p>
+      </div>
+      <div class="score"><div><strong>4 / 4</strong><span>CowAgent 已实现的搜索供应商</span></div><div><strong>2 / 2</strong><span>CowAgent + LiteLLM 真实 smoke 通过</span></div><div><strong>PR #1</strong><span><a href="https://github.com/lanyue-llk/CowAgent/pull/1">fork 集成已提交</a>；本地与云端四实例可体验</span></div></div>
+    </section>
+
+    <section class="section" id="status">
+      <span class="kicker">01 · Current state</span>
+      <h2>CowAgent 的三层 Web 能力现状</h2>
+      <p>CowAgent 将联网能力拆成搜索发现、页面读取和浏览器交互。Lexmount 的价值应沿着这三个边界接入，避免复制已经存在的能力。</p>
+      <h3>Web Search：四家均已集成，不是候选名单</h3>
+      <table><thead><tr><th>供应商</th><th>CowAgent 当前调用</th><th>凭证与界面</th><th>结论</th></tr></thead><tbody>
+        <tr><td><strong>Bocha</strong></td><td><code>POST api.bochaai.com/v1/web-search</code></td><td>独立 <code>bocha_api_key</code>；Web 控制台有专门配置</td><td><span class="badge">已实现</span></td></tr>
+        <tr><td><strong>Qianfan</strong></td><td><code>/ai_search/web_search</code></td><td>复用千帆模型供应商 API Key</td><td><span class="badge">已实现</span></td></tr>
+        <tr><td><strong>Zhipu</strong></td><td><code>/web_search</code></td><td>复用智谱模型供应商 API Key</td><td><span class="badge">已实现</span></td></tr>
+        <tr><td><strong>LinkAI</strong></td><td><code>/v1/plugin/execute</code>，插件码 <code>web-search</code></td><td>复用 LinkAI 模型供应商 API Key</td><td><span class="badge">已实现</span></td></tr>
+      </tbody></table>
+      <p>实现不止存在于文档：后端分别发送真实 HTTP 请求，统一为 <code>{query, backend, total, count, results}</code>；控制台能选择 <code>auto</code> 或固定供应商；无任何有效 Key 时，<code>web_search</code> 不注册；配置两家以上且为自动策略时，模型才会看到逐次选择 <code>provider</code> 的参数。</p>
+      <div class="callout warn"><strong>当前缺口：</strong>主干没有独立的 Web Search 单元测试文件。四家实现是明确的，但真实 API 的字段漂移、限流和错误返回仍依赖凭证环境验证。Lexmount 可以在商业上为这些供应商提供底层浏览器基础设施；这属于 B2B 供给关系，不等于 CowAgent 中新增 Lexmount Search Provider。</div>
+      <h3>Web Fetch 与 Browser：Lexmount 的直接进入点</h3>
+      <div class="grid2"><div class="mini"><h3>Web Fetch</h3><p>当前工具适合 HTTP 可直接读取的内容，也处理 PDF、Office 等文档。遇到 JavaScript 渲染、反爬、登录态和需要动作后才出现的正文时，需要升级到浏览器。</p></div><div class="mini"><h3>Browser</h3><p>当前由 Playwright 驱动，支持内置浏览器、系统 Chrome/Edge 与外部 CDP Endpoint；动作包括导航、快照、点击、填写、选择、滚动、截图、脚本执行、前进后退等。外部 CDP 是 Moli 和 Lexmount Cloud 的现成协议接缝。</p></div></div>
+    </section>
+
+    <section class="section" id="portfolio">
+      <span class="kicker">02 · Product position</span>
+      <h2>Lexmount 应提供一条递进式运行路径</h2>
+      <div class="flow"><div class="node"><strong>本地 Moli</strong><br><span class="muted">免费安装；单进程、低内存；适合 DOM / 可访问性树驱动任务和本地应用。</span></div><div class="arrow">→</div><div class="node"><strong>Cloud Moli</strong><br><span class="muted">低资源内核的托管版本；面向高并发、结构化网页自动化。</span></div><div class="arrow">↔</div><div class="node"><strong>Cloud Chromium</strong><br><span class="muted">面向像素、Canvas/WebGL、媒体、复杂下载和高兼容工作负载。</span></div></div>
+      <table><thead><tr><th>产品</th><th>主要用户价值</th><th>适合</th><th>不应承诺</th></tr></thead><tbody>
+        <tr><td><strong>本地 Moli</strong></td><td>零云成本试用；资源占用低；可访问 localhost / 内网</td><td>网页读取、表单、后台系统、批量 DOM 操作</td><td>当前不作为默认 Provider；不承诺像素级视觉一致</td></tr>
+        <tr><td><strong>Lexmount WebFetch</strong></td><td>把页面渲染与正文提取托管化，降低 Agent token 与重试开销</td><td>JS 页面、批量内容读取、浏览器前的轻量升级</td><td>不能替代搜索索引或搜索排序</td></tr>
+        <tr><td><strong>Cloud Moli</strong></td><td>低资源高密度会话、统一生命周期、代理与远程观察</td><td>并发 Agent、结构优先自动化、服务端部署</td><td>Chromium 的全部图形与持久化能力</td></tr>
+        <tr><td><strong>Cloud Chromium</strong></td><td>完整浏览器兼容性、复杂网页、企业运行控制</td><td>视觉任务、媒体、下载、录制、复杂登录流程</td><td>与 Moli 相同的单位资源成本</td></tr>
+      </tbody></table>
+      <p class="note">Lexmount Cloud 同时提供 Chromium 和 Moli 是关键优势：用户可在同一供应商下按工作负载选内核。不过两种内核能力并不等价；公开文档显示，Moli 会话不支持 Contexts、持久录制与下载持久化，应在 CowAgent 配置界面明确展示。</p>
+    </section>
+
+    <section class="section" id="examples">
+      <span class="kicker">03 · Concrete usage</span>
+      <h2>三个真实用法：从本地测试到生产运行</h2>
+      <h3>例一：本地 Moli 直接复用 CowAgent 现有 Browser 动作</h3>
+      <p>开发者希望让 CowAgent 操作本地管理台，不希望上传登录态，也不想启动多进程 Chromium。Moli 在本机提供 CDP，CowAgent 不需要修改动作协议：</p>
+      <pre><code># 安装 Moli 后启动本地 CDP 服务
+moli serve --layout --host 127.0.0.1 --port 9222
+
+# CowAgent config.json
+{
+  "tools": {
+    "browser": {
+      "cdp_endpoint": "http://127.0.0.1:9222"
+    }
+  }
+}</code></pre>
+      <p>随后用户可提出：“打开 <code>http://127.0.0.1:3000/admin</code>，筛选失败任务，导出错误摘要。”导航、snapshot、fill、click、get_text 等仍由 CowAgent 原工具完成。<code>--layout</code> 对依赖坐标或可见性判断的页面更稳妥。</p>
+      <h3>例二：搜索 → 提取 → 浏览器的分层升级</h3>
+      <pre><code>用户：找出三家厂商最新价格并比较退款条款。
+
+1. web_search(provider="bocha") 发现候选 URL
+2. web_fetch(provider="lexmount") 提取普通/JS 渲染页面正文
+3. 仅当价格需选规格、同意 Cookie 或登录后出现时：
+   browser(engine="lexmount", kernel="moli" | "chromium")</code></pre>
+      <p>搜索负责“找到哪里”，WebFetch 负责“低成本读出来”，Browser 负责“执行动作后取得结果”。让所有 URL 一开始就启动浏览器会增加成本；只做静态 fetch 又会漏掉动态内容。</p>
+      <h3>例三：云端生产会话必须由 CowAgent 管理生命周期</h3>
+      <pre><code># LEXMOUNT_API_KEY 与 LEXMOUNT_PROJECT_ID 由环境变量提供
+from lexmount import Lexmount
+
+client = Lexmount()
+with client.sessions.create(
+    browser_mode="light",         # Moli；Chromium 使用 "normal"
+    enable_lightmount_layout=True
+) as session:
+    await browser_service.connect_cdp(session.connect_url)
+    # CowAgent 继续执行 navigate / snapshot / click / fill ...
+# 退出 with 时 SDK 关闭 session</code></pre>
+      <p>静态填写 <code>cdp_endpoint</code> 可以做 PoC，但不够支撑正式云集成：生产版本必须创建会话、连接、暴露只读 Inspect/View 地址、在超时或任务结束时回收，并在日志中隐藏含凭证的 WebSocket URL。</p>
+    </section>
+
+    <section class="section" id="moli-test">
+      <span class="kicker">04 · Compatibility evidence</span>
+      <h2>Moli 作为 Browser Provider 应如何选择？</h2>
+      <p>本报告在隔离目录下载 Moli 1.0.6，使用 CowAgent 当前桌面依赖的 Playwright 1.52.0，并直接加载 CowAgent 的 <code>BrowserService</code> 连接本地 Moli CDP。测试页面覆盖文本框、下拉框、按钮、导航和长页面。</p>
+      <div class="grid3"><div class="mini good"><h3>15 / 15 通过</h3><p>navigate、snapshot、ref 填写/点击、select、get_text、evaluate、scroll、wait、screenshot、selector 点击、跳转、back、forward、press。</p></div><div class="mini blue"><h3>3.06 秒</h3><p>合入 Provider 后的完整 BrowserTool 动作合同测试耗时；生成有效 PNG，工具关闭后 Moli 进程自动回收（单次本机样本，不作跨平台基准）。</p></div><div class="mini warn"><h3>不是全兼容证明</h3><p>测试未覆盖复杂 SSO、Canvas/WebGL、视频、下载持久化、反自动化站点和长时间多页会话。</p></div></div>
+      <p>Moli 公布的 agent 样本中，峰值 PSS 为 102.46 MiB，Chromium 为 348.82 MiB；公开混合抓取样本的中位 RSS 为 73 MiB 对 773 MiB。但更广的 1,308 项 Lexbench 中，Moli 可比通过率为 81.88%，Chrome/Chromium 基线为 99.85%。经 Moli 官方确认，该 Lexbench 任务集上 Chrome 与 Chromium 的结果完全一致。数据支持“速度与资源成本优先时推荐 Moli”，但在成功率接近或对齐前，不支持把 Moli 设为默认 Provider。</p>
+      <table><thead><tr><th>工作负载</th><th>推荐内核</th><th>理由</th></tr></thead><tbody>
+        <tr><td>DOM 读取、表单、后台、批量网页操作，且速度/成本优先</td><td><strong>推荐 Moli</strong></td><td>协议已实测兼容，资源优势可转化为并发密度</td></tr>
+        <tr><td>本地网站、内网系统、隐私敏感登录态</td><td><strong>本地 Moli / Chromium</strong></td><td>云端默认无法访问用户 localhost / LAN；按页面兼容性选择</td></tr>
+        <tr><td>Canvas、WebGL、视频、像素级截图、复杂扩展</td><td><strong>Chromium</strong></td><td>Moli 的轻量渲染模型不是完整 GUI Chromium</td></tr>
+        <tr><td>生产高并发且页面结构可控</td><td><strong>Cloud Moli</strong></td><td>低资源内核 + 托管会话与代理能力</td></tr>
+        <tr><td>未知网站或最高兼容性优先</td><td><strong>Cloud Chromium</strong></td><td>避免因内核差异导致隐性失败</td></tr>
+      </tbody></table>
+      <div class="callout good"><strong>产品结论：</strong>Moli 与 Chromium 是并列的 Browser Provider。“本地 Moli 免费试用 → Lexmount Cloud 生产升级”是合理漏斗；首版让用户显式选择，并在速度/成本优先场景标记 Moli 为推荐项，在兼容性优先场景推荐 Chromium。Moli 的真实任务成功率接近或对齐 Chrome/Chromium 后，才讨论默认值。不建议遇错后静默切换，因为登录态、页面状态和操作幂等性通常无法无损迁移。</div>
+    </section>
+
+    <section class="section" id="integration">
+      <span class="kicker">05 · Integration design</span>
+      <h2>具体应如何集成到 CowAgent</h2>
+      <h3>A. 本地 Moli：先利用 CDP，再补官方级启动体验</h3>
+      <p><strong>零代码路径已经可用：</strong>用户手动启动 Moli，将现有 <code>tools.browser.cdp_endpoint</code> 指向它。官方集成不应止步于文档，而应新增 <code>engine: moli</code>，负责查找二进制、启动端口、健康检查、profile 目录和退出回收。</p>
+      <pre><code>"browser": {
+  "engine": "moli",             // builtin | system | moli | lexmount
+  "moli_path": "/optional/path/moli",
+  "moli_layout": true,
+  "headless": true
+}</code></pre>
+      <p>代码改动集中在浏览器环境检测/安装与服务创建层，<strong>不修改</strong> navigate、snapshot、click、fill 等工具 schema。这是上游容易审阅的边界：新增引擎，不重写 Browser Tool。</p>
+      <h3>B. Lexmount WebFetch：只接管网页分支</h3>
+      <p>在现有 <code>web_fetch</code> 增加 <code>provider = local | lexmount</code>。PDF、Word、Excel 等文件继续使用 CowAgent 当前解析器；HTML/动态网页才进入 Lexmount。URL 在发送到供应商之前继续执行 CowAgent 的 SSRF 与私网地址校验，返回值统一成现有 <code>ToolResult</code>。Lexmount 公开文档当前将 WebFetch API 标注为<strong>内测</strong>，正式合入前需先确认对外 SLA、配额和版本承诺。</p>
+      <pre><code>if is_document_url(url):
+    return await local_document_fetch(url)
+assert_public_url(url)                     # 在任何外部请求之前
+if provider == "lexmount":
+    result = await lexmount.post("/v1/extract", {
+        "extract": {"url": url}
+    })  # X-API-Key + X-Project-Id
+    return ToolResult(text=result.main_text, metadata={
+        "url": result.final_url, "title": result.title,
+        "provider": "lexmount", "engine": result.engine,
+        "dom_id": result.dom_id
+    })
+return await local_web_fetch(url)</code></pre>
+      <p>实现已补齐超时、最大响应长度、最终地址二次校验、状态码映射和凭证脱敏；默认仍为 <code>local</code>，用户显式选择 Lexmount，防止每次读取都产生云费用。自动升级与自动降级暂不加入首版，因为它会使成本和结果来源变得不可预测。</p>
+      <h3>C. Lexmount Cloud Browser：建立 Provider 生命周期，而非硬编码 Endpoint</h3>
+      <p>实现窄接口 <code>BrowserProvider.start()</code> / <code>close()</code>，返回 <code>cdp_endpoint</code>、<code>inspect_url</code> 与 session id；随后仍调用现有 <code>connect_over_cdp</code>。</p>
+      <pre><code>"browser": {
+  "engine": "lexmount",
+  "lexmount": {
+    "browser": "moli",          // moli | chromium
+    "layout": true,
+    "resource": false,
+    "recording": false
+  }
+}</code></pre>
+      <ul><li>SDK 按 Python 版本约束安装、运行时懒加载；未选择 Lexmount 时不创建远程会话。</li><li>启动失败、工具关闭和空闲回收路径均关闭 Provider 会话，避免孤儿会话计费。</li><li>CDP 日志只保留 host/port，不输出 path、query token 或完整连接地址。</li><li>共享 BrowserService 的复用 key 已加入完整配置与 workspace 摘要，配置变化时先关闭旧会话。</li><li>Inspect/View URL 仅保存在 Provider 连接元数据中，不进入模型输出。</li></ul>
+    </section>
+
+    <section class="section" id="prs">
+      <span class="kicker">06 · Upstream landscape</span>
+      <h2>在审 PR 与 Lexmount 的差别：有机会，但要选对赛道</h2>
+      <table><thead><tr><th>方案</th><th>它在增加什么</th><th>完成度</th><th>与 Lexmount 的关系</th></tr></thead><tbody>
+        <tr><td><a href="https://github.com/zhayujie/CowAgent/pull/3071">PR #3071 · Serply</a></td><td>第五个 SERP / Web Search API</td><td>后端与英文文档；无专门测试、Web UI 与多语言同步；仍在审</td><td>不直接竞争。Serply 返回搜索结果；Lexmount 提供页面提取和浏览器运行时。</td></tr>
+        <tr><td><a href="https://github.com/zhayujie/CowAgent/pull/3083">PR #3083 · AnySearch</a></td><td>第五个 SERP / Web Search API</td><td>后端、Web UI、三语文档、178 行测试及手工截图；仍在审</td><td>不直接竞争，但展示了供应商 PR 的质量门槛正在提高。</td></tr>
+        <tr><td><a href="https://github.com/lanyue-llk/CowAgent/pull/1">Lexmount fork PR #1</a></td><td>Moli 本地 Provider、Lexmount WebFetch、Cloud Browser 双内核</td><td>Provider adapter、配置、三语文档、相关单元/安全测试与真实 smoke 已完成；四个隔离 Web 实例可体验</td><td>补足 Fetch 与 Browser 运行层，不需要争夺拥挤的 Search Provider 位置。</td></tr>
+      </tbody></table>
+      <p><strong>是否还有机会：有。</strong>两个 PR 只扩充搜索供应商，没有解决低资源本地浏览器、动态提取或托管会话。CowAgent 当前又已经支持 CDP，因此 Lexmount 的技术侵入小于新增一套 Browser 动作。不过，“协议可连”不等于“官方必收”：供应商中立性、可维护性、测试覆盖、可选依赖、免费可复现路径和安全边界决定接受概率。</p>
+      <div class="grid2"><div class="mini good"><h3>提高接受概率</h3><ul><li>Moli 本地可免费复现，不要求审阅者持有商业账号</li><li>先提交引擎抽象与 Moli，商业 Cloud 作为独立后续 PR</li><li>保持现有工具 schema 和默认行为不变</li><li>带跨平台启动、CDP 合同、SSRF 与日志脱敏测试</li></ul></div><div class="mini risk"><h3>降低接受概率</h3><ul><li>把 Lexmount 包装成不存在的 Search Provider</li><li>一个 PR 同时塞入 Search、Fetch、Browser 与控制台大改</li><li>默认把全部用户切到 Moli</li><li>要求 API Key 才能运行 CI，或在日志泄露连接凭证</li></ul></div></div>
+    </section>
+
+    <section class="section" id="tradeoffs">
+      <span class="kicker">07 · Objective assessment</span>
+      <h2>为什么使用，以及为什么不使用</h2>
+      <div class="grid2"><div class="mini good"><h3>采用 Lexmount 的理由</h3><ul><li><strong>资源效率：</strong>Moli 对 DOM 类任务能显著降低内存、线程和进程数量，提升并发密度。</li><li><strong>同一 CDP 动作面：</strong>CowAgent 既有 Playwright 动作基本可复用，迁移成本低。</li><li><strong>本地到云的连续体验：</strong>本地 Moli 免费验证；生产可在 Cloud Moli 与 Chromium 间选择。</li><li><strong>基础设施完整：</strong>云端会话、代理、观察/接管与生命周期管理是本地浏览器缺少的生产能力。</li><li><strong>与 Search 互补：</strong>可服务现有搜索供应商，也可承接 CowAgent 搜索后的页面访问。</li></ul></div><div class="mini risk"><h3>不采用或暂缓的理由</h3><ul><li><strong>兼容性边界：</strong>未知网站、图形与媒体任务仍以 Chromium 更稳。</li><li><strong>云成本与锁定：</strong>个人轻量任务用现有本地 Chrome 已足够，接云会增加费用与供应商依赖。</li><li><strong>数据边界：</strong>云浏览器处理 cookies、页面数据和企业凭证，需要明确地域、保留、审计与删除策略。</li><li><strong>能力不对称：</strong>Cloud Moli 与 Chromium 在 Context、录制、下载等方面不同。</li><li><strong>上游维护成本：</strong>新 engine/provider 会扩展 CowAgent 测试矩阵，必须有持续维护承诺。</li></ul></div></div>
+    </section>
+
+    <section class="section" id="delivery">
+      <span class="kicker">08 · Two-week delivery</span>
+      <h2>两周可交付范围</h2>
+      <p>两周内可以完成“可运行集成 + 代表性评测 + 可评审材料”，但不能承诺 CowAgent 官方在两周内完成 review 或 merge。当前 fork 的三条能力已在一个 PR 中落地；提交官方上游时，再根据维护者反馈决定保持单 PR 还是按免费 Moli 与商业 Provider 拆分。</p>
+      <div class="timeline"><div class="week"><h3>已完成 · 三条路径</h3><div class="day"><b>实现</b><span>Moli 本地启动/回收、Cloud 双内核 Session、WebFetch 输出归一和本地文档解析保留。</span></div><div class="day"><b>验证</b><span>真实 Moli 动作合同、相关单元/安全测试、Cloud 凭证链路与 CowAgent + LiteLLM 真实 smoke。</span></div><div class="day"><b>交付</b><span>fork PR #1、三语文档、四个隔离 Web 实例及可复现浏览器评测。</span></div></div><div class="week"><h3>剩余两周 · 收敛与上游</h3><div class="day"><b>D1–D3</b><span>定位 Moli 在 Books 首次导航与 RFC 长文档上的失败和尾延迟，并拆分网页流量与 CDP 流量。</span></div><div class="day"><b>D4–D6</b><span>修复后重跑固定 10 任务、3 次重复的评测集，保持暖浏览器与任务间状态清理。</span></div><div class="day"><b>D7–D8</b><span>补 Cloud Chromium / Cloud Moli 的端到端任务样本与 token、重试和云成本统计。</span></div><div class="day"><b>D9–D10</b><span>冻结复现材料；按维护者反馈将免费 Moli 与商业 Provider 拆分或收敛提交。</span></div></div></div>
+      <h3>验收标准</h3>
+      <ul><li>不配置 Lexmount 时，CowAgent 默认 Provider 和运行行为不变；当前 fork 安装包会增加按 Python 版本约束的 Lexmount SDK。</li><li>Moli 覆盖 CowAgent 全部现有 Browser action；不支持项返回明确错误而非假成功。</li><li>Cloud session 在成功、超时、取消、异常四种路径均自动回收，日志不含 API Key / 完整连接 URL。</li><li>WebFetch 保留原文档解析，动态网页结果可追溯最终 URL、标题、provider 与渲染状态。</li><li>公开区分“实测”“供应商基准”“尚未验证”，不把性能优势外推成通用兼容性。</li></ul>
+    </section>
+
+    <section class="section" id="recommendation">
+      <span class="kicker">09 · Recommendation</span>
+      <h2>建议决策</h2>
+      <div class="callout good"><strong>建议推进。</strong>首要上游目标是 Moli 本地引擎：免费、可复现、与 CowAgent 现有 CDP 架构对齐，且已经通过原生动作合同实测。Lexmount Cloud Browser 与 WebFetch 同期完成可运行分支和演示，但根据维护者反馈拆分提交，避免商业供应商代码绑架核心浏览器抽象。</div>
+      <ol><li><strong>不做 Lexmount Web Search Provider。</strong>四家已经真实集成；Lexmount 没有搜索服务。对它们的基础设施合作走商务与后端供给，不污染 CowAgent 的搜索配置。</li><li><strong>把 Moli 定位为并列 Browser Provider。</strong>速度和成本优先时推荐 Moli，兼容性优先时推荐 Chromium；真实任务成功率接近或对齐后再讨论默认值。</li><li><strong>云端突出“双内核 + 生产控制”。</strong>Cloud Moli 卖密度，Cloud Chromium 卖兼容，二者共同卖会话、代理、可观测、接管和运维。</li><li><strong>官方接受策略以中立抽象为先。</strong>先让 CowAgent 获得通用 Browser / Fetch Provider 接缝，再把 Lexmount 做成其中一个可选实现。</li></ol>
+    </section>
+
+    <section class="section" id="sources">
+      <span class="kicker">Sources & scope</span>
+      <h2>证据来源与口径</h2>
+      <ul class="sources"><li><a href="https://github.com/zhayujie/CowAgent">CowAgent 仓库与当前主干代码</a></li><li><a href="https://github.com/zhayujie/CowAgent/pull/3071">PR #3071：Serply</a></li><li><a href="https://github.com/zhayujie/CowAgent/pull/3083">PR #3083：AnySearch</a></li><li><a href="https://github.com/lexmount/moli">Moli 源码、安装、协议、基准与限制</a></li><li><a href="https://browser.lexmount.com/">Lexmount Cloud Browser 产品与双内核能力</a></li><li><a href="https://browser.lexmount.com/docs/python-sdk/quickstart">Lexmount Python SDK Quickstart</a></li><li><a href="https://browser.lexmount.com/docs/webfetch">Lexmount WebFetch API</a></li></ul>
+      <p class="note">代码结论更新至 2026-09-01 的 CowAgent 集成提交。Moli 早期动作合同测试与本轮 10 任务 × 2 内核 × 3 次的浏览器评测口径不同；后者详见<a href="browser-use-evaluation-latest.html">《Chromium 与 Moli 浏览器工具调用评测》</a>。本轮 Chromium 30/30、Moli 28/30；Moli 配对样本的时间加权平均内存 P50 为 Chromium 的 0.48×，但成功率、CPU 与尾延迟尚未对齐，因此只支持“内存优先推荐项”，不支持设为默认值。Cloud 与本地链路已使用真实凭证和 <code>gpt-5.6-sol</code>（low）验证；正式商业材料仍应附固定版本、机器配置与可复现脚本。外部 PR 状态可能在报告发布后变化。</p>
+    </section>
+  </main>
+  <footer class="shell">Lexmount × CowAgent · Browser infrastructure integration assessment · 2026-08-31</footer>
+</body>
+</html>

@@ -55,6 +55,7 @@ def add_openai_compatible_support(bot_instance):
                 'api_key': conf().get("open_ai_api_key"),
                 'api_base': conf().get("open_ai_api_base"),
                 'model': conf().get("model") or const.DEFAULT_MODEL,
+                'allowed_openai_params': conf().get("open_ai_allowed_openai_params", []),
                 'default_temperature': conf().get("temperature", 0.9),
                 'default_top_p': conf().get("top_p", 1.0),
                 'default_frequency_penalty': conf().get("frequency_penalty", 0.0),

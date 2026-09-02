@@ -121,6 +121,7 @@ hiddenimports += collect_submodules('openpyxl')
 # Playwright imports its transport/driver lazily, so list submodules explicitly.
 hiddenimports += ['playwright', 'playwright.sync_api', 'playwright._impl']
 hiddenimports += collect_submodules('playwright')
+hiddenimports += collect_submodules('lexmount')
 
 # --- Data files -----------------------------------------------------------
 # Runtime-read files/dirs that must travel with the executable. Paths are

@@ -10,6 +10,7 @@ description: 获取网页或文档内容
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `url` | string | 是 | HTTP/HTTPS URL（网页或文档链接） |
+| `provider` | string | 否 | `local`（默认）或 `lexmount`；文档始终使用本地解析器 |
 
 ## 支持的文件类型
 
@@ -28,5 +29,26 @@ description: 获取网页或文档内容
 - 获取 API 响应内容
 
 <Note>
-  `web_fetch` 只能获取静态 HTML 内容。如果页面需要 JavaScript 渲染（如 SPA 单页应用），请使用 `browser` 工具。
+  默认的 `local` Provider 获取静态 HTML。公开动态页面可使用
+  `lexmount` Provider；需要点击、登录态、表单、截图或下载时使用
+  `browser` 工具。
 </Note>
+
+## Lexmount WebFetch Provider
+
+Lexmount WebFetch 可渲染公开网页并返回结构化正文。设置
+`LEXMOUNT_API_KEY` 和 `LEXMOUNT_PROJECT_ID` 后配置：
+
+```json
+{
+  "tools": {
+    "web_fetch": {
+      "provider": "lexmount"
+    }
+  }
+}
+```
+
+也可在单次调用中传入 `provider: "lexmount"`。PDF、Word、Excel 和 PPT
+仍由 CowAgent 本地解析。Lexmount 公开文档目前将 WebFetch API 标为内测，
+生产启用前需确认服务权限。

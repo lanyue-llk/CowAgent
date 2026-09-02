@@ -10,6 +10,7 @@ HTTP/HTTPS URL の内容を取得します。Web ページからは可読テキ�
 | パラメータ | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `url` | string | はい | HTTP/HTTPS URL（Web ページまたはドキュメント） |
+| `provider` | string | いいえ | `local`（既定）または `lexmount`。ドキュメントは常にローカル解析 |
 
 ## 対応ファイル形式
 
@@ -28,5 +29,25 @@ HTTP/HTTPS URL の内容を取得します。Web ページからは可読テキ�
 - API レスポンスの確認
 
 <Note>
-  `web_fetch` は静的 HTML のみ取得できます。JavaScript レンダリングが必要なページ（SPA など）は `browser` ツールを使用してください。
+  既定の `local` Provider は静的 HTML を取得します。公開動的ページには
+  `lexmount`、クリック、ログイン、フォーム、スクリーンショット、
+  ダウンロードが必要な場合は `browser` を使用します。
 </Note>
+
+## Lexmount WebFetch Provider
+
+Lexmount WebFetch は公開ページをレンダリングし、構造化された本文を返します。
+`LEXMOUNT_API_KEY` と `LEXMOUNT_PROJECT_ID` を設定します。
+
+```json
+{
+  "tools": {
+    "web_fetch": {
+      "provider": "lexmount"
+    }
+  }
+}
+```
+
+個別の呼び出しで `provider: "lexmount"` を指定することもできます。
+PDF、Word、Excel、PowerPoint は CowAgent のローカル解析を使用します。

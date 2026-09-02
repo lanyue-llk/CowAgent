@@ -55,6 +55,7 @@ class OpenAIBot(Bot, OpenAIImage, OpenAICompatibleBot):
         return {
             'api_key': conf().get("open_ai_api_key"),
             'api_base': conf().get("open_ai_api_base"),
+            'allowed_openai_params': conf().get("open_ai_allowed_openai_params", []),
             'model': conf().get("model", "text-davinci-003"),
             'default_temperature': conf().get("temperature", 0.9),
             'default_top_p': conf().get("top_p", 1.0),

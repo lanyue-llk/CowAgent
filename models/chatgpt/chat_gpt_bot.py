@@ -89,6 +89,7 @@ class ChatGPTBot(Bot, OpenAIImage, OpenAICompatibleBot):
             'api_key': api_key,
             'api_base': api_base,
             'model': model,
+            'allowed_openai_params': conf().get("open_ai_allowed_openai_params", []),
             'default_temperature': conf().get("temperature", 0.9),
             'default_top_p': conf().get("top_p", 1.0),
             'default_frequency_penalty': conf().get("frequency_penalty", 0.0),

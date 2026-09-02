@@ -10,6 +10,7 @@ Fetch the content of an HTTP/HTTPS URL. Web pages are extracted as readable text
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `url` | string | Yes | HTTP/HTTPS URL (web page or document) |
+| `provider` | string | No | `local` (default) or `lexmount`; documents always use the local parser |
 
 ## Supported file types
 
@@ -28,5 +29,26 @@ Fetch the content of an HTTP/HTTPS URL. Web pages are extracted as readable text
 - Inspect API response bodies
 
 <Note>
-  `web_fetch` only retrieves static HTML. For pages that require JavaScript rendering (such as SPAs), use the `browser` tool instead.
+  The default `local` provider retrieves static HTML. Use the `lexmount`
+  provider for rendered public pages, or the `browser` tool when clicks,
+  login state, forms, screenshots, or downloads are required.
 </Note>
+
+## Lexmount WebFetch provider
+
+Lexmount WebFetch renders public webpages and returns structured readable
+content. Configure `LEXMOUNT_API_KEY` and `LEXMOUNT_PROJECT_ID`, then set:
+
+```json
+{
+  "tools": {
+    "web_fetch": {
+      "provider": "lexmount"
+    }
+  }
+}
+```
+
+You can also select `provider: "lexmount"` for one call. PDF, Word, Excel,
+and presentation files keep using CowAgent's local parsers. Lexmount currently
+documents WebFetch API as internal testing; confirm access before production use.

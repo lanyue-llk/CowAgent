@@ -185,3 +185,57 @@ Then point the Agent at the endpoint in `config.json`:
 <Note>
   Chrome 137+ requires `--remote-debugging-port` to be paired with a dedicated `--user-data-dir`. As a result, the CDP-launched Chrome **cannot directly reuse the login state of your daily Chrome**; you'll need to log in once inside this dedicated profile.
 </Note>
+
+### Option 3: Local Moli provider
+
+[Moli](https://github.com/lexmount/moli) is an independent, open-source
+browser provider for agent workloads. It is not treated as a Chromium
+replacement: choose Moli when startup speed and resource cost matter most, and
+choose Chrome/Chromium when maximum site and visual compatibility matters most.
+
+```json
+{
+  "tools": {
+    "browser": {
+      "engine": "moli",
+      "moli_layout": true,
+      "moli_resource": false
+    }
+  }
+}
+```
+
+Install Moli and put `moli` on `PATH`; CowAgent then starts and stops it
+automatically. Optional keys are `moli_path`, `moli_profile_dir`,
+`moli_layout`, `moli_resource`, and `moli_args`.
+
+### Option 4: Lexmount Cloud Browser provider
+
+Lexmount Cloud Browser provides managed Chromium and Moli sessions:
+
+```bash
+export LEXMOUNT_API_KEY="sk_..."
+export LEXMOUNT_PROJECT_ID="project_..."
+```
+
+```json
+{
+  "tools": {
+    "browser": {
+      "engine": "lexmount",
+      "lexmount": {
+        "browser": "moli",
+        "layout": true,
+        "resource": false,
+        "downloads": false,
+        "recording": false
+      }
+    }
+  }
+}
+```
+
+Use `"browser": "chromium"` for managed Chromium. Moli maps to the
+Lexmount SDK/API value `light`; Chromium maps to `normal`. CowAgent creates
+the session lazily, connects through CDP, and closes it when the browser tool is
+closed or idles out. Connection URLs are redacted from logs.

@@ -17,6 +17,7 @@ DASHSCOPE_QWEN38_VALUES = ["low", "medium", "xhigh"]
 DASHSCOPE_HIGH_MAX_VALUES = ["high", "max"]
 DASHSCOPE_MAX_ONLY_VALUES = ["max"]
 KIMI_K3_VALUES = ["low", "high", "max"]
+OPENAI_GPT56_SOL_VALUES = ["none", "low", "medium", "high", "xhigh", "max"]
 CLAUDE_XHIGH_MODELS = (
     "claude-fable-5",
     "claude-mythos-5",
@@ -92,6 +93,9 @@ def get_reasoning_capability(provider_id: str, model_name: str = "") -> dict:
 
     if base_pid == "deepseek" and model.startswith("deepseek-v4"):
         return _capability(DEEPSEEK_VALUES, default="high")
+
+    if base_pid == "openai" and model.startswith("gpt-5.6-sol"):
+        return _capability(OPENAI_GPT56_SOL_VALUES, default="medium")
 
     if base_pid == "zhipu":
         if model.startswith(ZHIPU_GLM53_MODELS):

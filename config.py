@@ -25,6 +25,10 @@ available_setting = {
     "open_ai_api_key": "",  # openai api key
     # openai api base; when use_azure_chatgpt is true, set the matching api base
     "open_ai_api_base": "https://api.openai.com/v1",
+    # LiteLLM can require explicit passthrough for newer OpenAI parameters.
+    # Keep empty for the official OpenAI API and gateways that reject this
+    # LiteLLM-specific request field.
+    "open_ai_allowed_openai_params": [],
     "claude_api_base": "https://api.anthropic.com/v1",  # claude api base
     "gemini_api_base": "https://generativelanguage.googleapis.com",  # gemini api base
     "custom_api_key": "",  # custom OpenAI-compatible provider api key (used when bot_type is "custom"); legacy single-provider field

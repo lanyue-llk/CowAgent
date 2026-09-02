@@ -35,8 +35,7 @@ class OpenAICompatibleBot:
 
         Covers gpt-5, gpt-5.4/5.5/5.6 (including suffixed variants like
         gpt-5.6-sol / gpt-5.6-luna) and the o1/o3/o4 families. These models
-        only accept default sampling params and, on /v1/chat/completions,
-        reject reasoning_effort together with function tools.
+        only accept default sampling parameters.
         """
         if not model_name or not isinstance(model_name, str):
             return False
@@ -123,6 +122,14 @@ class OpenAICompatibleBot:
             if is_gpt5_reasoning:
                 for key in ("temperature", "top_p", "frequency_penalty", "presence_penalty"):
                     request_params.pop(key, None)
+
+            reasoning_effort = kwargs.get("reasoning_effort")
+            if reasoning_effort:
+                request_params["reasoning_effort"] = reasoning_effort
+
+            allowed_openai_params = api_config.get("allowed_openai_params")
+            if isinstance(allowed_openai_params, list) and allowed_openai_params:
+                request_params["allowed_openai_params"] = allowed_openai_params
             
             # Add max_tokens if specified
             if kwargs.get("max_tokens"):
@@ -132,12 +139,6 @@ class OpenAICompatibleBot:
             if tools:
                 request_params["tools"] = tools
                 request_params["tool_choice"] = kwargs.get("tool_choice", "auto")
-                # GPT-5.x reasoning models reject function tools combined with
-                # reasoning_effort on /v1/chat/completions unless it is "none".
-                # Force "none" so agent tool calling works without migrating to
-                # the Responses API.
-                if is_gpt5_reasoning:
-                    request_params["reasoning_effort"] = "none"
             
             # Make API call with proper configuration
             api_key = api_config.get('api_key')

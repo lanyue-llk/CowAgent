@@ -15,6 +15,7 @@ import queue
 import signal
 import threading
 from typing import Optional, Dict, Any, List, Callable
+from urllib.parse import urlparse
 
 from common.log import logger
 from common.utils import expand_path, is_cloud_deployment, memory_headroom_mb
@@ -444,6 +445,9 @@ class BrowserService:
         # the macOS Automation prompt + multi-second stall that
         # chromium.launch(channel=...) incurs. Holds the child process owner.
         self._chrome_launcher = None
+        # Provider-owned runtime (local Moli process or Lexmount cloud session).
+        self._provider = None
+        self._provider_connection = None
         # Path to the system browser executable when using system-chrome mode.
         self._system_exe: Optional[str] = None
 
@@ -459,6 +463,7 @@ class BrowserService:
         # Chromium. `self._channel` is the Playwright channel ("chrome"/"msedge")
         # when driving a system browser, else None (bundled Chromium).
         cdp_endpoint = self._config.get("cdp_endpoint") or ""
+        engine_pref = str(self._config.get("engine", "")).strip().lower()
         persistent_flag = self._config.get("persistent", True)
         user_data_dir_cfg = self._config.get("user_data_dir")
         if user_data_dir_cfg is None:
@@ -469,6 +474,9 @@ class BrowserService:
         if self._cdp_endpoint:
             self._launch_mode = "cdp"
             self._user_data_dir: str = ""
+        elif engine_pref in ("moli", "lexmount"):
+            self._launch_mode = "provider-cdp"
+            self._user_data_dir = ""
         elif persistent_flag and user_data_dir_cfg:
             self._launch_mode = "persistent"
             self._user_data_dir = expand_path(str(user_data_dir_cfg))
@@ -485,7 +493,7 @@ class BrowserService:
         # debugging port and attach over CDP (self._launch_mode = "system-cdp").
         # `self._system_exe` is the browser executable; the persistent
         # user_data_dir keeps login state across sessions.
-        if self._launch_mode != "cdp":
+        if self._launch_mode not in ("cdp", "provider-cdp"):
             try:
                 from agent.tools.browser.browser_env import resolve_engine
                 engine = resolve_engine(self._config)
@@ -514,6 +522,15 @@ class BrowserService:
         self._idle_timer: Optional[threading.Timer] = None
 
         startup_cfg = self._config.get("startup_timeout")
+        if startup_cfg is None and engine_pref == "lexmount":
+            nested = self._config.get("lexmount") or {}
+            nested = nested if isinstance(nested, dict) else {}
+            provider_timeout = (
+                self._config.get("lexmount_startup_timeout")
+                or nested.get("startup_timeout")
+                or 600
+            )
+            startup_cfg = float(provider_timeout) + 15
         self._startup_timeout: float = (
             float(startup_cfg) if startup_cfg is not None else self._STARTUP_TIMEOUT_DEFAULT
         )
@@ -567,6 +584,7 @@ class BrowserService:
             self._launch_browser()
         except Exception as e:
             logger.error(f"[Browser] Failed to launch browser: {e}")
+            self._shutdown_browser()
             self._alive = False
             self._ready.set()
             self._drain_queue(RuntimeError(f"Browser launch failed: {e}"))
@@ -700,9 +718,16 @@ class BrowserService:
             "Chrome/131.0.0.0 Safari/537.36"
         )
 
+        if self._launch_mode == "provider-cdp":
+            from agent.tools.browser.browser_provider import create_browser_provider
+
+            self._provider = create_browser_provider(self._config)
+            self._provider_connection = self._provider.start()
+            self._cdp_endpoint = self._provider_connection.cdp_endpoint
+
         self._playwright = sync_playwright().start()
 
-        if self._launch_mode == "cdp":
+        if self._launch_mode in ("cdp", "provider-cdp"):
             self._connect_cdp(viewport)
         elif self._launch_mode == "system-cdp":
             self._launch_system_cdp(launch_args, viewport)
@@ -821,17 +846,19 @@ class BrowserService:
     def _connect_cdp(self, viewport: Dict[str, int]):
         """Attach to an existing Chrome started with --remote-debugging-port."""
         endpoint = self._cdp_endpoint
-        logger.info(f"[Browser] Connecting to existing Chrome via CDP: {endpoint}")
+        parsed = urlparse(endpoint)
+        endpoint_label = parsed.hostname or "configured endpoint"
+        if parsed.port:
+            endpoint_label += f":{parsed.port}"
+        logger.info(f"[Browser] Connecting via CDP: {endpoint_label}")
         try:
             self._browser = self._playwright.chromium.connect_over_cdp(endpoint)
         except Exception as e:
             msg = str(e).lower()
             if "econnrefused" in msg or "connect" in msg or "refused" in msg:
                 raise RuntimeError(
-                    f"Cannot reach Chrome at {endpoint}. The CDP browser is not "
-                    "running. Ask the user to launch Chrome with "
-                    "--remote-debugging-port and --user-data-dir, then retry. "
-                    "Do not retry this tool until the user confirms."
+                    "Cannot reach the configured CDP browser. Verify that the "
+                    "selected browser provider is running and reachable, then retry."
                 ) from e
             raise
 
@@ -866,12 +893,13 @@ class BrowserService:
         Mode-specific behavior:
         - cdp: only disconnect the Playwright client; leave the user's Chrome
           and its tabs untouched (do NOT close the context).
+        - provider-cdp: disconnect, then release the provider-owned runtime.
         - persistent: close the persistent context (no separate browser handle).
         - fresh: close context, then browser.
         """
         self._cancel_idle_timer()
 
-        if self._launch_mode == "cdp":
+        if self._launch_mode in ("cdp", "provider-cdp"):
             # For external CDP, browser.close() only detaches the Playwright
             # client; the user's Chrome process and its tabs stay alive.
             try:
@@ -879,6 +907,14 @@ class BrowserService:
                     self._browser.close()
             except Exception as e:
                 logger.debug(f"[Browser] cdp disconnect error: {e}")
+            if self._launch_mode == "provider-cdp":
+                try:
+                    if self._provider:
+                        self._provider.close()
+                except Exception as e:
+                    logger.warning(f"[Browser] provider cleanup error: {e}")
+                self._provider = None
+                self._provider_connection = None
         elif self._launch_mode == "system-cdp":
             # We own the spawned Chrome: detach the CDP client, then kill the
             # process we started so it doesn't linger.
